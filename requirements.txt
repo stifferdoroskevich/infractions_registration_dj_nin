@@ -1,3 +1,4 @@
 Django==5.0.7
 django-ninja==1.2.2
 pytz==2024.1
+PyJWT==2.9.0

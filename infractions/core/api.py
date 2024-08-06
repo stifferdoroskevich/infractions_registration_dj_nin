@@ -1,12 +1,20 @@
-from ninja import NinjaAPI
-from .models import Persona, Vehiculo, Oficial, Infraccion
 from django.shortcuts import get_object_or_404
+from ninja import NinjaAPI
+from ninja.errors import HttpError
 from ninja.orm import create_schema
+from ninja.security import HttpBearer
 from pytz import timezone as pytz_timezone
+
+from django.utils import timezone
+
+from .models import Persona, Vehiculo, Oficial, Infraccion
+from .utils import create_jwt_token, verify_jwt_token
 
 env_timezone = 'America/Asuncion'
 
-api = NinjaAPI()
+api = NinjaAPI(
+   title="Infracciones API",
+   description="Una demo API para consulta de registros y carga de infracciones")
 
 # Schemas
 PersonaIn = create_schema(Persona, exclude=["id"])
@@ -21,8 +29,30 @@ OficialOut = create_schema(Oficial)
 InfraccionIn = create_schema(Infraccion, exclude=["id"])
 InfraccionOut = create_schema(Infraccion)
 
+
+class AuthBearer(HttpBearer):
+    def authenticate(self, request, token):
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+            oficial = verify_jwt_token(token)
+            if oficial:
+                request.oficial = oficial
+                return token
+        raise HttpError(401, "Unauthorized")
+
+@api.get("/bearer")
+def bearer(request, nui: str):
+    try:
+        oficial = Oficial.objects.get(nui=nui)
+        token = create_jwt_token(oficial)
+        return {"token": token}
+    except Oficial.DoesNotExist:
+        return {"error": "Invalid NUI"}, 400
+
+
 # API endpoints for Persona
-@api.get("/personas", response=list[PersonaOut])
+@api.get("/personas", response=list[PersonaOut], auth=AuthBearer())
 def list_personas(request):
     return Persona.objects.all()
 
@@ -51,7 +81,7 @@ def create_oficial(request, payload: OficialIn):
     oficial = Oficial.objects.create(**payload.dict())
     return oficial
 
-@api.post("/infracciones", response=InfraccionOut)
+@api.post("/infracciones", response=InfraccionOut, auth=AuthBearer())
 def create_infraction(request, payload: InfraccionOut):
     payload_data = payload.dict()
     print("PAYLOAD: ", payload_data)
