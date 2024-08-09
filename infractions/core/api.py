@@ -96,3 +96,18 @@ def create_infraction(request, payload: InfraccionOut):
         comentarios=payload_data['comentarios']
     )
     return infraccion
+
+@api.get("/generar_informe", response=list[InfraccionOut])
+def generar_informe(request, email):
+    persona = get_object_or_404(Persona, correo=email)
+    vehiculos = Vehiculo.objects.filter(persona_id=persona.id)
+    if not vehiculos:
+        raise HttpError(404, f"No existe vehiculo asociado con el email {email}")
+
+    infracciones = Infraccion.objects.filter(vehiculo__in=vehiculos)
+    if not infracciones:
+        raise HttpError(404, f"No existen infracciones asociadas con el email {email}, enhorabuena!")
+
+    return infracciones
+
+
