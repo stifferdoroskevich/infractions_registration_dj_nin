@@ -1,6 +1,5 @@
 from django.db import models
 from django.utils import timezone
-from pytz import timezone as pytz_timezone
 
 class Persona(models.Model):
     nombre = models.CharField(max_length=255)
@@ -8,6 +7,10 @@ class Persona(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        self.correo = str(self.correo).lower()
+        super(Persona, self).save(*args, **kwargs)
 
 
 class Vehiculo(models.Model):
@@ -18,6 +21,10 @@ class Vehiculo(models.Model):
 
     def __str__(self):
         return self.placa_patente
+
+    def save(self, *args, **kwargs):
+        self.placa_patente = self.placa_patente.upper()
+        super(Vehiculo, self).save(*args, **kwargs)
 
 
 class Oficial(models.Model):

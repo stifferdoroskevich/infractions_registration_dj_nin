@@ -68,7 +68,15 @@ def list_vehiculos(request):
 
 @api.post("/vehiculos", response=VehiculoOut)
 def create_vehiculo(request, payload: VehiculoIn):
-    vehiculo = Vehiculo.objects.create(**payload.dict())
+    payload = payload.dict()
+    persona = get_object_or_404(Persona, id=payload.dict().get("persona"))
+    vehiculo = Vehiculo.objects.create(
+        placa_patente=payload.get("placa_patente"),
+        marca=payload.get("marca"),
+        color=payload.get("color"),
+        persona=persona
+        )
+
     return vehiculo
 
 # API endpoints for Oficial
